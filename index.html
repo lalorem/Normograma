@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Normograma - Empresa de Parques y Eventos de Antioquia - ACTIVA</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+
+  <style>
+    .scrollbar-hide::-webkit-scrollbar { display: none; }
+    .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f0fdf4',
+              100: '#dcfce7',
+              200: '#bbf7d0',
+              300: '#86efac',
+              400: '#4ade80',
+              500: '#22c55e',
+              600: '#16a34a',
+              700: '#15803d',
+              800: '#166534',
+              900: '#14532d',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans">
+  
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useMemo, useEffect, useCallback } = React;
+
+    // === URL REAL DE TU APPSCRIPT ===
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhRWhi481x-yi_S8sP8uh9MWFvsBLK0G1VtjkhsJVPHQWuDHQKwW7KVVAKRpLdLhE/exec"; 
+
+    // Categorías de Filtro basadas en los tipos de normas comunes
+    const CATEGORIAS_NORMAS = [
+      "Todos", "Constitución Política", "Ley", "Decreto", "Resolución", "Acuerdo", "Circular"
+    ];
+
+    // Funciones auxiliares para normalizar la lectura de las columnas reales de tu Excel
+    const getTipoNorma = (item) => item["TIPO DE NORMA/DOCUMENTO"] || item["TIPO DE NORMA"] || "";
+    const getNumeroId = (item) => item["NÚUMERO DE IDENTIFICACIÓN"] || item["NÚMERO DE IDENTIFICACIÓN"] || item["NÚMERO"] || "";
+    const getTitulo = (item) => item["TÍTULO DEL DOCUMENTO"] || item["TÍTULO"] || "";
+    const getTema = (item) => item["TEMA ESPECÍFICO"] || item["TEMA"] || "";
+    const getFecha = (item) => item["FECHA DE EXPEDICIÓN"] || item["FECHA"] || "";
+    const getArticulos = (item) => item["ARTÍCULOS"] || item["ARTICULOS"] || "";
+    const getComentarios = (item) => item["COMENTARIOS"] || item["OBSERVACIONES"] || "";
+    const getLink = (item) => item["LINK"] || item["Link"] || "";
+
+    function App() {
+      const [currentView, setCurrentView] = useState('landing'); // 'landing' | 'normograma' | 'derogadas' | 'sugeridas'
+      
+      const [normogramaData, setNormogramaData] = useState([]);
+      const [derogadasData, setDerogadasData] = useState([]);
+      const [sugeridasData, setSugeridasData] = useState([]);
+      
+      const [isLoading, setIsLoading] = useState(true);
+      const [fetchError, setFetchError] = useState("");
+
+      const [searchTermInput, setSearchTermInput] = useState("");
+      const [debouncedSearch, setDebouncedSearch] = useState("");
+      const [selectedCategory, setSelectedCategory] = useState("Todos");
+      const [expandedRow, setExpandedRow] = useState(null);
+
+      // Debounce effect para optimizar la búsqueda en tiempo real
+      useEffect(() => {
+        const timerId = setTimeout(() => {
+          setDebouncedSearch(searchTermInput);
+        }, 300);
+        return () => clearTimeout(timerId);
+      }, [searchTermInput]);
+
+      // Carga inicial conectando a tu backend de Google Sheets / AppScript
+      useEffect(() => {
+        fetch(SCRIPT_URL)
+          .then(res => res.json())
+          .then(json => {
+            // Se asume que tu API de AppScript retorna los objetos mapeando las pestañas
+            setNormogramaData(json.normograma || json.tarifario || []); 
+            setDerogadasData(json.derogadas || json.premium || []);
+            setSugeridasData(json.sugeridas || []);
+            setIsLoading(false);
+          })
+          .catch(err => {
+            console.error("Error cargando datos:", err);
+            setFetchError("Hubo un error conectando a la base de datos de Google Sheets. Intenta recargar la página.");
+            setIsLoading(false);
+          });
+      }, []);
+
+      // Determinar qué bloque de datos se va a usar según la vista activa de la app
+      const activeData = useMemo(() => {
+        if (currentView === 'normograma') return normogramaData;
+        if (currentView === 'derogadas') return derogadasData;
+        if (currentView === 'sugeridas') return sugeridasData;
+        return [];
+      }, [currentView, normogramaData, derogadasData, sugeridasData]);
+
+      // Filtrado inteligente por texto y categoría (Tipo de norma)
+      const filteredData = useMemo(() => {
+        return activeData.filter(item => {
+          const tipo = getTipoNorma(item);
+          const numero = getNumeroId(item);
+          const titulo = getTitulo(item);
+          const tema = getTema(item);
+
+          const matchSearch = 
+            String(tipo).toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            String(numero).toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            String(titulo).toLowerCase().includes(debouncedSearch.toLowerCase()) ||
+            String(tema).toLowerCase().includes(debouncedSearch.toLowerCase());
+          
+          const matchCategory = selectedCategory === "Todos" || 
+            tipo.toLowerCase().includes(selectedCategory.toLowerCase());
+
+          return matchSearch && matchCategory;
+        });
+      }, [activeData, debouncedSearch, selectedCategory]);
+
+      // Exportación limpia a Excel usando SheetJS conservando filtros activos
+      const exportToExcel = useCallback(() => {
+        const dataForExcel = filteredData.map(item => ({
+          "Tipo de Norma": getTipoNorma(item),
+          "Número de Identificación": getNumeroId(item),
+          "Título del Documento": getTitulo(item),
+          "Tema Específico": getTema(item),
+          "Fecha de Expedición": getFecha(item),
+          "Artículos": getArticulos(item),
+          "Comentarios": getComentarios(item),
+          "Enlace de Consulta": getLink(item)
+        }));
+
+        const worksheet = XLSX.utils.json_to_sheet(dataForExcel);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Exportación");
+        XLSX.writeFile(workbook, `Normas_Exportadas_${currentView}.xlsx`);
+      }, [filteredData, currentView]);
+
+      if (isLoading) {
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-brand-50 text-brand-700">
+             <i className="fa-solid fa-circle-notch fa-spin fa-3x mb-4"></i>
+             <h2 className="text-xl font-bold">Cargando Normograma Institucional...</h2>
+          </div>
+        );
+      }
+
+      if (fetchError) {
+        return (
+          <div className="min-h-screen flex flex-col items-center justify-center bg-brand-50 p-4">
+             <div className="bg-white p-8 rounded-xl shadow-md text-center max-w-md">
+                <i className="fa-solid fa-triangle-exclamation text-4xl text-red-500 mb-4"></i>
+                <h2 className="text-xl font-bold text-slate-800 mb-2">Problema de conexión</h2>
+                <p className="text-slate-600 mb-6">{fetchError}</p>
+                <button onClick={() => window.location.reload()} className="px-6 py-2 bg-brand-600 text-white rounded-lg font-bold">Reintentar</button>
+             </div>
+          </div>
+        );
+      }
+
+      // VISTA 1: MENÚ O LANDING PRINCIPAL
+      if (currentView === 'landing') {
+        return (
+          <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+            <div className="max-w-5xl w-full">
+              <div className="text-center mb-12">
+                <div className="bg-white rounded-xl p-4 shadow-sm border border-slate-200 inline-block mb-6 font-bold text-brand-700 tracking-wide text-2xl px-6">
+                  <i className="fa-solid fa-gavel mr-2 text-brand-600"></i>ACTIVA
+                </div>
+                <h1 className="text-3xl md:text-4xl font-bold text-slate-800 mb-3">
+                  Sistema Integrado de Normograma Institucional
+                </h1>
+                <p className="text-lg text-slate-500">
+                  Gestión y consulta de bases jurídicas, decretos y resoluciones aplicables.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <button 
+                  onClick={() => { setCurrentView('normograma'); setSearchTermInput(""); setSelectedCategory("Todos"); }}
+                  className="bg-white hover:bg-brand-50 border-2 border-transparent hover:border-brand-500 rounded-2xl p-6 flex flex-col items-center text-center transition-all shadow-sm hover:shadow-md cursor-pointer group"
+                >
+                  <div className="w-16 h-16 bg-brand-100 rounded-full flex items-center justify-center mb-4 text-brand-600 group-hover:scale-110 transition-transform">
+                    <i className="fa-solid fa-book text-2xl"></i>
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-800 mb-2">Normograma Activa</h2>
+                  <p className="text-sm text-slate-500">Leyes, decretos y directrices principales actualmente vigentes.</p>
+                </button>
+
+                <button 
+                  onClick={() => { setCurrentView('derogadas'); setSearchTermInput(""); setSelectedCategory("Todos"); }}
+                  className="bg-white hover:bg-red-50 border-2 border-transparent hover:border-red-400 rounded-2xl p-6 flex flex-col items-center text-center transition-all shadow-sm hover:shadow-md cursor-pointer group"
+                >
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4 text-red-500 group-hover:scale-110 transition-transform">
+                    <i className="fa-solid fa-folder-minus text-2xl"></i>
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-800 mb-2">Normas Derogadas</h2>
+                  <p className="text-sm text-slate-500">Historial de documentos que perdieron vigencia legal o ejecutoria.</p>
+                </button>
+
+                <button 
+                  onClick={() => { setCurrentView('sugeridas'); setSearchTermInput(""); setSelectedCategory("Todos"); }}
+                  className="bg-white hover:bg-amber-50 border-2 border-transparent hover:border-amber-400 rounded-2xl p-6 flex flex-col items-center text-center transition-all shadow-sm hover:shadow-md cursor-pointer group"
+                >
+                  <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-4 text-amber-600 group-hover:scale-110 transition-transform">
+                    <i className="fa-solid fa-lightbulb text-2xl"></i>
+                  </div>
+                  <h2 className="text-xl font-bold text-slate-800 mb-2">Normas Sugeridas</h2>
+                  <p className="text-sm text-slate-500">Disposiciones recomendadas para actualización y análisis regulatorio.</p>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // VISTA 2: NORMAS (TABLA DETALLADA)
+      return (
+        <div className="pb-10">
+          <header className="bg-brand-700 text-white p-6 shadow-md border-b-4 border-brand-500">
+            <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <button 
+                  onClick={() => { setCurrentView('landing'); setExpandedRow(null); }} 
+                  className="text-brand-100 hover:text-white transition-colors" 
+                  title="Volver al menú inicial"
+                >
+                    <i className="fa-solid fa-arrow-left text-2xl"></i>
+                </button>
+                <h1 className="text-2xl md:text-3xl font-bold capitalize">
+                  {currentView === 'normograma' ? 'Normograma Vigente' : currentView === 'derogadas' ? 'Archivo Normas Derogadas' : 'Normas Sugeridas Avanzadas'}
+                </h1>
+              </div>
+              <button onClick={exportToExcel} className="flex items-center gap-2 bg-brand-500 hover:bg-brand-600 px-5 py-2.5 rounded-lg text-sm font-bold shadow-sm transition-colors">
+                <i className="fa-solid fa-file-excel"></i> Exportar Vista a Excel
+              </button>
+            </div>
+          </header>
+
+          <main className="max-w-7xl mx-auto px-4 sm:px-6 mt-8">
+            {/* BARRA DE BÚSQUEDA */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-6">
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400"><i className="fa-solid fa-search"></i></div>
+                <input 
+                  type="text" 
+                  placeholder="Buscar por tipo, palabra clave del título o tema específico..." 
+                  className="w-full pl-10 pr-4 py-3 border rounded-lg focus:ring-2 focus:ring-brand-500 outline-none text-slate-700" 
+                  value={searchTermInput} 
+                  onChange={(e) => setSearchTermInput(e.target.value)} 
+                />
+              </div>
+            </div>
+
+            {/* CHIPS FILTRADORES POR TIPO */}
+            <div className="mb-6 overflow-x-auto pb-2 scrollbar-hide">
+              <div className="flex gap-2">
+                {CATEGORIAS_NORMAS.map(cat => (
+                  <button 
+                    key={cat} 
+                    onClick={() => setSelectedCategory(cat)} 
+                    className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all ${selectedCategory === cat ? 'bg-brand-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-300 hover:bg-brand-50'}`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* TABLA PRINCIPAL */}
+            <div className="bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-slate-100 text-slate-700 text-sm font-bold border-b border-slate-200">
+                    <th className="p-4 w-1/4">Tipo / Identificación</th>
+                    <th className="p-4 w-1/2">Título del Documento</th>
+                    <th className="p-4 w-1/4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {filteredData.length === 0 ? (
+                    <tr>
+                      <td colSpan="3" className="text-center py-10 text-slate-400 font-medium">
+                        No se encontraron normas asociadas al criterio de búsqueda.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredData.map((item, index) => {
+                      const isExpanded = expandedRow === index;
+                      const linkUrl = getLink(item);
+
+                      return (
+                        <React.Fragment key={index}>
+                          <tr className={`hover:bg-slate-50 transition-colors ${isExpanded ? 'bg-brand-50/40' : ''}`}>
+                            <td className="p-4 font-medium text-slate-900">
+                              <span className="block text-xs uppercase tracking-wider text-brand-700 font-bold mb-1">{getTipoNorma(item)}</span>
+                              <span>ID: {getNumeroId(item) || 'N/A'}</span>
+                            </td>
+                            <td className="p-4 text-slate-600 line-clamp-2 md:line-clamp-none">
+                              {getTitulo(item)}
+                            </td>
+                            <td className="p-4 text-center">
+                              <div className="flex justify-center gap-2">
+                                <button 
+                                  onClick={() => setExpandedRow(isExpanded ? null : index)}
+                                  className="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-medium transition-colors text-xs flex items-center gap-1"
+                                >
+                                  <i className={`fa-solid ${isExpanded ? 'fa-eye-slash' : 'fa-eye'}`}></i> Detalle
+                                </button>
+                                {linkUrl && (
+                                  <a 
+                                    href={linkUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer"
+                                    className="px-3 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded font-medium transition-colors text-xs flex items-center gap-1"
+                                  >
+                                    <i className="fa-solid fa-external-link"></i> Ver PDF
+                                  </a>
+                                )}
+                              </div>
+                            </td>
+                          </tr>
+                          
+                          {/* PANEL DESPLEGABLE CON DETALLES DEL DOCUMENTO */}
+                          {isExpanded && (
+                            <tr className="bg-slate-50/50">
+                              <td colSpan="3" className="p-6 border-t border-slate-100">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  <div className="space-y-3">
+                                    <div>
+                                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Tema Específico</h4>
+                                      <p className="text-slate-700 font-medium">{getTema(item) || 'No especificado'}</p>
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Fecha de Expedición</h4>
+                                      <p className="text-slate-700 font-medium">{getFecha(item) || 'Desconocida'}</p>
+                                    </div>
+                                    <div>
+                                      <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Artículos Aplicables</h4>
+                                      <p className="text-slate-700 bg-white inline-block px-2 py-0.5 rounded border text-xs font-mono">{getArticulos(item) || 'Todos'}</p>
+                                    </div>
+                                  </div>
+                                  <div className="bg-white p-4 rounded-xl border border-slate-200">
+                                    <h4 className="text-xs font-bold text-brand-800 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                      <i className="fa-solid fa-comment-dots text-brand-500"></i> Comentarios / Análisis Jurídico
+                                    </h4>
+                                    <p className="text-slate-600 text-xs leading-relaxed italic">
+                                      {getComentarios(item) || 'Sin comentarios registrados para este documento.'}
+                                    </p>
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </main>
+        </div>
+      );
+    }
+    
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>

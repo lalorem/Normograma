@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Normograma Interactivo - ACTIVA S.A.S.</title>
+    <!-- Tailwind CSS para diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons para iconografía elegante -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            200: '#bbf7d0',
+                            300: '#86efac',
+                            400: '#4ade80',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d', // Verde principal intermedio
+                            800: '#166534',
+                            900: '#14532d', // Verde oscuro profundo
+                            950: '#052e16',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Estilos personalizados para scrollbars y transiciones */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #16a34a;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #15803d;
+        }
+        .table-fixed-header th {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .fade-in {
+            animation: fadeIn 0.4s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-50 min-h-screen font-sans text-slate-800 flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- ==========================================
+         VISTA 1: PANTALLA DE INICIO (LANDING PAGE)
+         ========================================== -->
+    <div id="home-view" class="flex-grow flex flex-col relative w-full h-screen">
+        
+        <!-- Hero Section -->
+        <div class="relative w-full h-[55vh] bg-brand-950 flex flex-col items-center justify-center overflow-hidden">
+            <!-- Imagen de fondo con opacidad -->
+            <img src="https://images.unsplash.com/photo-1573164713988-8665fc963095?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80" 
+                 alt="Fondo Corporativo" 
+                 class="absolute inset-0 w-full h-full object-cover opacity-20 mix-blend-luminosity">
+            
+            <!-- Gradiente para asegurar legibilidad -->
+            <div class="absolute inset-0 bg-gradient-to-t from-brand-950 via-brand-900/60 to-transparent"></div>
+
+            <!-- Contenido del Hero -->
+            <div class="relative z-10 text-center px-4 mt-8 flex flex-col items-center">
+                
+                <img src="activa.png" 
+                     alt="Logo ACTIVA" 
+                     class="h-28 md:h-36 mb-6 object-contain bg-white p-4 rounded-3xl shadow-xl shadow-black/20">
+
+                <h1 class="text-5xl md:text-7xl font-extrabold text-white tracking-tight uppercase drop-shadow-lg mb-4">
+                    Normograma
+                </h1>
+                <p class="text-brand-200 text-lg md:text-xl font-medium tracking-wide max-w-2xl mx-auto flex items-center justify-center gap-2">
+                    <i data-lucide="leaf" class="w-5 h-5 text-brand-400"></i>
+                    Empresa de Parques y Eventos de Antioquia - ACTIVA
+                </p>
+            </div>
+        </div>
+
+        <!-- Tarjetas de Navegación (Se ajustó el margen negativo para que bajen) -->
+        <div class="relative z-20 max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 -mt-8 pb-12">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+                
+                <!-- Tarjeta 1: Vigentes -->
+                <button onclick="openDataView('vigente')" class="bg-white rounded-3xl p-8 shadow-xl shadow-brand-900/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-[280px] text-left group border border-slate-100 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-2 bg-emerald-500"></div>
+                    <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <i data-lucide="file-check-2" class="w-7 h-7 text-emerald-600"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-3">Normograma ACTIVA</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed flex-grow">Consulta el marco normativo oficial y vigente que rige las operaciones de la entidad.</p>
+                    <div class="mt-auto flex justify-end w-full">
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </button>
+
+                <!-- Tarjeta 2: Sugeridas -->
+                <button onclick="openDataView('sugerida')" class="bg-white rounded-3xl p-8 shadow-xl shadow-brand-900/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-[280px] text-left group border border-slate-100 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-2 bg-blue-500"></div>
+                    <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <i data-lucide="lightbulb" class="w-7 h-7 text-blue-600"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-3">Normas Sugeridas</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed flex-grow">Directrices, decretos y leyes recomendadas para fortalecer la gestión institucional.</p>
+                    <div class="mt-auto flex justify-end w-full">
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-blue-600 group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </button>
+
+                <!-- Tarjeta 3: Derogadas (AHORA ES ROJA) -->
+                <button onclick="openDataView('derogada')" class="bg-white rounded-3xl p-8 shadow-xl shadow-brand-900/10 hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 flex flex-col h-[280px] text-left group border border-slate-100 relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-2 bg-red-500"></div>
+                    <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300">
+                        <i data-lucide="archive-restore" class="w-7 h-7 text-red-600"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-800 mb-3">Derogadas</h2>
+                    <p class="text-slate-500 text-sm leading-relaxed flex-grow">Historial de normativas sin vigencia o que han sido reemplazadas.</p>
+                    <div class="mt-auto flex justify-end w-full">
+                        <div class="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-red-600 group-hover:bg-red-500 group-hover:text-white transition-colors duration-300">
+                            <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </div>
+                    </div>
+                </button>
+
+            </div>
+            
+            <div class="text-center mt-12 text-sm text-slate-400">
+                <p>&copy; 2026 Empresa de Parques y Eventos de Antioquia - ACTIVA S.A.S.</p>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- ==========================================
+         VISTA 2: PANEL DE DATOS Y TABLAS (SEPARADO)
+         ========================================== -->
+    <div id="data-view" class="hidden flex-col min-h-screen bg-slate-50 w-full fade-in pb-10">
+        
+        <!-- Navbar Superior (Regresar) -->
+        <nav class="bg-brand-950 text-white shadow-md sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+                <button onclick="openHomeView()" class="flex items-center gap-2 text-brand-200 hover:text-white transition-colors group">
+                    <div class="bg-brand-800/50 p-1.5 rounded-lg group-hover:bg-brand-700 transition-colors">
+                        <i data-lucide="chevron-left" class="w-5 h-5"></i>
+                    </div>
+                    <span class="font-semibold text-sm">Volver al Inicio</span>
+                </button>
+                <div class="flex items-center gap-3">
+                    
+                    <img src="activa.png" 
+                         alt="Logo ACTIVA" 
+                         class="h-10 bg-white p-1.5 rounded-lg object-contain shadow-sm">
+                         
+                </div>
+            </div>
+        </nav>
+
+        <main class="max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 pt-8 flex-grow flex flex-col">
+            
+            <!-- Encabezado de la Sección y Filtros (Sin Pestañas) -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mb-6 flex flex-col gap-5">
+                
+                <!-- Título Dinámico de la Categoría y Botón de Exportar -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-100 pb-5">
+                    <div class="flex items-center gap-4">
+                        <div id="categoryIcon" class="p-3 rounded-2xl bg-brand-50 text-brand-600">
+                            <!-- Icono Inyectado por JS -->
+                        </div>
+                        <div>
+                            <h2 id="categoryTitle" class="text-2xl font-bold text-slate-800 leading-tight">Título</h2>
+                            <p id="categorySubtitle" class="text-sm text-slate-500 mt-0.5">Subtítulo</p>
+                        </div>
+                    </div>
+                    
+                    <button onclick="exportToExcel()" class="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-emerald-600/20 w-full sm:w-auto justify-center">
+                        <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                        Exportar Excel
+                    </button>
+                </div>
+
+                <!-- Buscador y Selector -->
+                <div class="flex flex-col md:flex-row gap-3">
+                    <div class="relative flex-grow">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-slate-400">
+                            <i data-lucide="search" class="w-5 h-5"></i>
+                        </span>
+                        <input type="text" id="searchInput" oninput="applyFilters()" class="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 focus:border-transparent transition-all" placeholder="Buscar por palabra clave, artículo, tema o número de norma...">
+                    </div>
+                    
+                    <div class="flex gap-2 min-w-[200px]">
+                        <select id="typeFilter" onchange="applyFilters()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-600 font-medium text-slate-700">
+                            <option value="">Todos los tipos</option>
+                            <option value="Constitución">Constitución Política</option>
+                            <option value="Ley">Leyes</option>
+                            <option value="Decreto">Decretos</option>
+                            <option value="Resolución">Resoluciones</option>
+                            <option value="Acuerdo">Acuerdos / Circulares</option>
+                            <option value="Otros">Guías y Manuales</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Contenedor de la Tabla -->
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm flex-grow flex flex-col overflow-hidden">
+                <div class="overflow-x-auto max-h-[65vh] flex-grow">
+                    <table class="w-full text-left border-collapse table-fixed-header">
+    <thead>
+        <tr class="bg-slate-100 border-b border-slate-200">
+            <th class="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider w-1/6 bg-slate-100">Tipo de Documento</th>
+            <th class="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider w-1/12 bg-slate-100">Identificación</th>
+            <th class="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider w-1/4 bg-slate-100">Título / Tema Específico</th>
+            <th class="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider w-1/12 bg-slate-100">Fecha</th>
+            <th class="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider w-1/12 bg-slate-100">Enlaces Norma</th>
+            <th class="p-4 text-xs font-bold text-slate-600 uppercase tracking-wider w-1/12 bg-slate-100 text-center">Detalles</th>
+        </tr>
+    </thead>
+    <tbody id="tableBody" class="divide-y divide-slate-100 text-sm">
+        </tbody>
+</table>
+                </div>
+
+                <!-- Footer Tabla -->
+                <div class="p-4 bg-slate-50 border-t border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <span class="text-sm text-slate-500 font-medium" id="recordCount">Mostrando 0 registros</span>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ==========================================
+         MODAL DETALLES DE LA NORMA
+         ========================================== -->
+    <div id="detailsModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden opacity-0 transition-opacity duration-300">
+        <div class="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-slate-200 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+            
+            <div class="flex justify-between items-start border-b border-slate-100 pb-5 mb-5">
+                <div class="flex items-center space-x-4">
+                    <div id="modalIconContainer" class="p-3 rounded-2xl">
+                        <!-- Icono Dinámico -->
+                    </div>
+                    <div>
+                        <span id="modalCategory" class="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1 block">Categoría</span>
+                        <h3 id="modalTitle" class="text-xl font-bold text-slate-800 leading-tight">Título de la Norma</h3>
+                    </div>
+                </div>
+                <button onclick="closeDetails()" class="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+
+            <div class="space-y-5 overflow-y-auto flex-grow pr-2 custom-scrollbar">
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">ID / Número</span>
+                        <p id="modalId" class="text-sm font-semibold text-slate-700"></p>
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Fecha Expedición</span>
+                        <p id="modalDate" class="text-sm font-semibold text-slate-700"></p>
+                    </div>
+                </div>
+
+                <div>
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Tema Específico</span>
+                    <p id="modalTopic" class="text-sm text-slate-700 leading-relaxed bg-brand-50/50 p-4 rounded-2xl border border-brand-100/50"></p>
+                </div>
+
+                <div>
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Artículos Aplicables</span>
+                    <p id="modalArticles" class="text-sm text-slate-700 font-mono bg-slate-50 p-4 rounded-2xl border border-slate-100"></p>
+                </div>
+
+                <div>
+                    <span class="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Comentarios / Notas Técnicas</span>
+                    <p id="modalComments" class="text-sm text-slate-600 italic bg-amber-50/50 p-4 rounded-2xl border border-amber-100/50"></p>
+                </div>
+            </div>
+
+            <div class="border-t border-slate-100 pt-5 mt-5 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <span id="modalStatusBadge" class="inline-block"></span>
+                <div class="flex gap-3 w-full sm:w-auto">
+                    <button onclick="closeDetails()" class="flex-1 sm:flex-none px-5 py-2.5 border border-slate-200 rounded-xl text-slate-600 hover:bg-slate-50 transition-all text-sm font-bold">
+                        Cerrar
+                    </button>
+                    <a id="modalExternalLink" href="#" target="_blank" class="flex-1 sm:flex-none px-5 py-2.5 bg-brand-700 hover:bg-brand-800 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 transition-all shadow-lg shadow-brand-700/20">
+                        <i data-lucide="external-link" class="w-4 h-4"></i>
+                        Ver Norma
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts y Datos -->
+    <script>
+        // Inicializar Iconos
+        lucide.createIcons();
+
+        // Base de Datos Estructurada
+        const normogramaData = [
+            // ACTIVA VIGENTES (Ejemplos extraídos de tus CSV)
+            { grupo: "vigente", tipo: "Constitución Política", id: "1991", titulo: "Constitución Política de Colombia", tema: "Funciones de asambleas, libre competencia y derechos de salud/seguridad social.", fecha: "20/07/1991", articulos: "16, 20, 24, 37, 44, 47, 48, 49, 52, 63, 64, 71, 123, 209, 267, 300-7, 305, 333, 366", estado: "Vigente", comentarios: "Marco rector y derechos fundamentales aplicables.", link: "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=4125" },
+            { grupo: "vigente", tipo: "Ley", id: "Ley 14 de 1983", titulo: "Fortalecimiento de los fiscos territoriales", tema: "Impuesto de industria y comercio.", fecha: "06/07/1983", articulos: "32 al 48", estado: "Vigente", comentarios: "Incorporado en Decreto 1333 de 1986.", link: "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=267" },
+            { grupo: "vigente", tipo: "Ley", id: "Ley 489 de 1998", titulo: "Organización de entidades del orden nacional", tema: "Régimen, autonomía y prerrogativas de las EICE.", fecha: "30/12/1998", articulos: "49, 85 al 94, 102", estado: "Vigente", comentarios: "Estatuto vital de organización administrativa.", link: "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=186" },
+            { grupo: "vigente", tipo: "Ley", id: "Ley 80 de 1993", titulo: "Estatuto General de Contratación", tema: "Definición y principios generales de contratación pública.", fecha: "28/10/1993", articulos: "2, 23, 24, 25, 26", estado: "Vigente", comentarios: "Aplicable en lo pertinente a contratos del giro ordinario.", link: "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=304" },
+            { grupo: "vigente", tipo: "Decreto", id: "Decreto 1072 de 2015", titulo: "DUR del Sector Trabajo", tema: "Sistema de Gestión de Seguridad y Salud en el Trabajo (SG-SST), contratistas.", fecha: "26/05/2015", articulos: "Libro 2, Parte 2", estado: "Vigente", comentarios: "Norma central en seguridad laboral.", link: "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=72173" },
+            { grupo: "vigente", tipo: "Decreto", id: "Dcto Ordenanzal 2020070002568", titulo: "Creación de la EICE ACTIVA", tema: "Estatuto de creación, objetivos, funciones y estructura.", fecha: "05/11/2020", articulos: "1 al 20", estado: "Vigente", comentarios: "Documento fundacional de la empresa expedido por Gobernación de Antioquia.", link: "https://compilacionjuridica.antioquia.gov.co/compilacion/compilacion/docs/d_gobant_2020070002568_2020.htm" },
+            { grupo: "vigente", tipo: "Acuerdo", id: "Acuerdo 001 de 2023", titulo: "Manual de Contratación ACTIVA", tema: "Normas y procedimientos de contratación interna.", fecha: "13/07/2023", articulos: "1 al 57", estado: "Vigente", comentarios: "Modifica estatutos de 2020.", link: "https://activa.com.co/wp-content/uploads/2025/02/ACUERDO-001-DE-2023.pdf" },
+            
+            // SUGERIDAS
+            { grupo: "sugerida", tipo: "Decreto", id: "Decreto 1083 de 2015", titulo: "DUR Sector Función Pública", tema: "Gestión de personal y empleo público.", fecha: "26/05/2015", articulos: "Varios", estado: "Sugerida / Vigente", comentarios: "Fundamental para administración de personal.", link: "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=62866" },
+            { grupo: "sugerida", tipo: "Decreto", id: "Decreto 1499 de 2017", titulo: "MIPG para EICE", tema: "Obligatoriedad del Modelo Integrado de Planeación y Gestión.", fecha: "11/09/2017", articulos: "Todos", estado: "Sugerida / Vigente", comentarios: "Integra control interno y eficiencia.", link: "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=83433" },
+            { grupo: "sugerida", tipo: "Ley", id: "Ley 1712 de 2014", titulo: "Transparencia y Acceso a la Información", tema: "Manejo y publicidad de información pública.", fecha: "06/03/2014", articulos: "Todos", estado: "Sugerida / Vigente", comentarios: "Sujetos obligados al manejar recursos públicos.", link: "https://www.funcionpublica.gov.co/eva/gestornormativo/norma.php?i=56882" },
+            { grupo: "sugerida", tipo: "Resolución", id: "Res 006 de 2025", titulo: "Planta de Cargos y Escala Salarial 2025", tema: "Actualización de nómina y escala.", fecha: "13/01/2025", articulos: "Todos", estado: "Sugerida / Vigente", comentarios: "Rige las condiciones actuales.", link: "https://activa.com.co" },
+
+            // DEROGADAS
+            { grupo: "derogada", tipo: "Decreto", id: "Decreto 1050 de 1968", titulo: "Reorganización Administración Nacional", tema: "Antigua definición de EICE.", fecha: "05/07/1968", articulos: "6", estado: "Derogada", comentarios: "Sustituido por Ley 489/98.", link: "" },
+            { grupo: "derogada", tipo: "Acuerdo", id: "Acuerdo 003 de 2020", titulo: "Primeros Estatutos ACTIVA", tema: "Reglas originales de contratación.", fecha: "05/12/2020", articulos: "1 al 79", estado: "Derogada", comentarios: "Derogado por Acuerdo 001 de 2023.", link: "" }
+        ];
+
+        let currentTab = "vigente";
+        let currentFilteredData = [];
+        // Navegación de Vistas y Categorías
+        function openDataView(category) {
+            currentTab = category;
+            
+            // Referencias del DOM para el Encabezado
+            const catTitle = document.getElementById('categoryTitle');
+            const catSub = document.getElementById('categorySubtitle');
+            const catIcon = document.getElementById('categoryIcon');
+
+            // Personalizar el encabezado según la categoría seleccionada
+            if (category === 'vigente') {
+                catTitle.innerText = "Normograma ACTIVA";
+                catSub.innerText = "Consulta el marco normativo oficial y vigente que rige las operaciones.";
+                catIcon.className = "p-3 rounded-2xl bg-emerald-100 text-emerald-700";
+                catIcon.innerHTML = `<i data-lucide="file-check-2" class="w-8 h-8"></i>`;
+            } else if (category === 'sugerida') {
+                catTitle.innerText = "Normas Sugeridas";
+                catSub.innerText = "Directrices, decretos y leyes recomendadas para fortalecer la gestión institucional.";
+                catIcon.className = "p-3 rounded-2xl bg-blue-100 text-blue-700";
+                catIcon.innerHTML = `<i data-lucide="lightbulb" class="w-8 h-8"></i>`;
+            } else if (category === 'derogada') {
+                catTitle.innerText = "Normas Derogadas";
+                catSub.innerText = "Historial de normativas sin vigencia o que han sido reemplazadas.";
+                catIcon.className = "p-3 rounded-2xl bg-red-100 text-red-700"; // Cambio de gris a rojo
+                catIcon.innerHTML = `<i data-lucide="archive-restore" class="w-8 h-8"></i>`;
+            }
+
+            // Refrescar iconos
+            lucide.createIcons();
+
+            // Limpiar filtros y búsqueda anterior
+            document.getElementById("searchInput").value = "";
+            document.getElementById("typeFilter").value = "";
+
+            // Cambiar de vista
+            document.getElementById('home-view').classList.add('hidden');
+            document.getElementById('data-view').classList.remove('hidden');
+            document.getElementById('data-view').classList.add('flex');
+            window.scrollTo(0, 0);
+
+            // Filtrar datos
+            applyFilters();
+        }
+
+        function openHomeView() {
+            document.getElementById('data-view').classList.add('hidden');
+            document.getElementById('data-view').classList.remove('flex');
+            document.getElementById('home-view').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        // Motor de Filtrado
+        function applyFilters() {
+            const searchVal = document.getElementById("searchInput").value.toLowerCase();
+            const typeVal = document.getElementById("typeFilter").value;
+            const tableBody = document.getElementById("tableBody");
+            tableBody.innerHTML = "";
+
+            currentFilteredData = normogramaData.filter(item => {
+                const matchesTab = item.grupo === currentTab;
+                const matchesSearch = item.titulo.toLowerCase().includes(searchVal) || 
+                                      item.id.toLowerCase().includes(searchVal) || 
+                                      item.tema.toLowerCase().includes(searchVal);
+                
+                let matchesType = true;
+                if (typeVal) {
+                    matchesType = item.tipo.toLowerCase().includes(typeVal.toLowerCase()) || 
+                                  (typeVal === "Otros" && !["Constitución", "Ley", "Decreto", "Resolución", "Acuerdo"].some(t => item.tipo.toLowerCase().includes(t.toLowerCase())));
+                }
+
+                return matchesTab && matchesSearch && matchesType;
+            });
+
+            currentFilteredData.forEach(item => {
+    const row = document.createElement("tr");
+
+    row.className =
+        "hover:bg-slate-50 transition-colors border-b border-slate-100 group";
+
+    row.innerHTML = `
+        <td class="p-4 font-bold text-slate-700">${item.tipo}</td>
+
+        <td class="p-4 font-mono text-xs text-slate-500">
+            ${item.id}
+        </td>
+
+        <td class="p-4">
+            <div class="font-bold text-brand-900 line-clamp-1">
+                ${item.titulo}
+            </div>
+            <div class="text-xs text-slate-500 line-clamp-1 mt-1">
+                ${item.tema}
+            </div>
+        </td>
+
+        <td class="p-4 text-slate-600 text-xs font-semibold">
+            ${item.fecha || 'N/A'}
+        </td>
+
+        <td class="p-4">
+            ${
+                item.link
+                ? `<a href="${item.link}"
+                       target="_blank"
+                       class="text-brand-700 hover:text-brand-900 underline font-semibold text-xs">
+                       Ver Norma
+                   </a>`
+                : `<span class="text-slate-400 text-xs">Sin enlace</span>`
+            }
+        </td>
+
+        <td class="p-4 text-center">
+            <button
+                onclick='openDetails("${encodeURIComponent(JSON.stringify(item))}")'
+                class="text-brand-700 bg-brand-50 hover:bg-brand-600 hover:text-white p-2.5 rounded-xl transition-all duration-200">
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+        </td>
+    `;
+
+    tableBody.appendChild(row);
+});
+
+            document.getElementById("recordCount").innerText = `${currentFilteredData.length} registro(s) encontrado(s)`;
+            lucide.createIcons();
+        }
+
+        function exportToExcel() {
+            if (currentFilteredData.length === 0) {
+                alert("No hay datos para exportar."); // Alert simple en este caso particular como fallback, aunque la tabla muestra 0 registros.
+                return;
+            }
+
+            // Preparar los datos para SheetJS
+            const excelData = currentFilteredData.map(item => ({
+                "Categoría": item.grupo.toUpperCase(),
+                "Tipo de Documento": item.tipo,
+                "Identificación": item.id,
+                "Título": item.titulo,
+                "Tema Específico": item.tema,
+                "Fecha de Expedición": item.fecha || 'N/A',
+                "Artículos Aplicables": item.articulos || 'Todos',
+                "Estado": item.estado,
+                "Comentarios": item.comentarios || '',
+                "Enlace de Consulta": item.link || ''
+            }));
+
+            // Crear un libro de trabajo y una hoja
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            
+            // Nombre de la hoja según la categoría
+            let sheetName = "Normograma";
+            if(currentTab === 'vigente') sheetName = "Vigentes";
+            if(currentTab === 'sugerida') sheetName = "Sugeridas";
+            if(currentTab === 'derogada') sheetName = "Derogadas";
+
+            XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+
+            // Ajustar el ancho de las columnas (opcional pero recomendado)
+            const wscols = [
+                {wch: 12}, // Categoría
+                {wch: 20}, // Tipo
+                {wch: 20}, // ID
+                {wch: 40}, // Título
+                {wch: 50}, // Tema
+                {wch: 15}, // Fecha
+                {wch: 20}, // Artículos
+                {wch: 15}, // Estado
+                {wch: 40}, // Comentarios
+                {wch: 30}  // Link
+            ];
+            worksheet['!cols'] = wscols;
+
+            // Generar el archivo y forzar la descarga
+            // Nombre del archivo con fecha
+            const date = new Date();
+            const dateStr = `${date.getFullYear()}${(date.getMonth()+1).toString().padStart(2, '0')}${date.getDate().toString().padStart(2, '0')}`;
+            const fileName = `Normograma_ACTIVA_${sheetName}_${dateStr}.xlsx`;
+
+            XLSX.writeFile(workbook, fileName);
+        }
+
+        // Modal de Detalles
+        function openDetails(itemStr) {
+            const item = JSON.parse(decodeURIComponent(itemStr));
+            const modal = document.getElementById("detailsModal");
+            
+            document.getElementById("modalCategory").innerText = item.tipo;
+            document.getElementById("modalTitle").innerText = item.titulo;
+            document.getElementById("modalId").innerText = item.id;
+            document.getElementById("modalDate").innerText = item.fecha || 'N/A';
+            document.getElementById("modalTopic").innerText = item.tema;
+            document.getElementById("modalArticles").innerText = item.articulos || "Aplicación General";
+            document.getElementById("modalComments").innerText = item.comentarios || "Sin comentarios técnicos registrados.";
+            
+            const linkBtn = document.getElementById("modalExternalLink");
+            if (item.link && item.link.trim() !== "") {
+                linkBtn.href = item.link;
+                linkBtn.style.display = "flex";
+            } else {
+                linkBtn.style.display = "none";
+            }
+
+            const badgeContainer = document.getElementById("modalStatusBadge");
+            if (item.grupo === "vigente" || item.grupo === "sugerida") {
+                badgeContainer.innerHTML = `<span class="bg-emerald-100 text-emerald-800 border border-emerald-300 font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2"><i data-lucide="check-circle" class="w-4 h-4"></i> VIGENTE</span>`;
+                document.getElementById("modalIconContainer").className = "p-3 rounded-2xl bg-emerald-50 text-emerald-600";
+                document.getElementById("modalIconContainer").innerHTML = `<i data-lucide="scale" class="w-8 h-8"></i>`;
+            } else {
+                // Etiqueta e ícono modificado a colores rojos
+                badgeContainer.innerHTML = `<span class="bg-red-100 text-red-800 border border-red-300 font-extrabold text-xs px-4 py-2 rounded-xl flex items-center gap-2"><i data-lucide="x-circle" class="w-4 h-4"></i> DEROGADA</span>`;
+                document.getElementById("modalIconContainer").className = "p-3 rounded-2xl bg-red-50 text-red-600";
+                document.getElementById("modalIconContainer").innerHTML = `<i data-lucide="archive-x" class="w-8 h-8"></i>`;
+            }
+
+            modal.classList.remove("hidden");
+            lucide.createIcons();
+            setTimeout(() => {
+                modal.classList.remove("opacity-0");
+                modal.querySelector(".transform").classList.remove("scale-95");
+            }, 10);
+        }
+
+        // Función corregida y completada
+        function closeDetails() {
+            const modal = document.getElementById("detailsModal");
+            modal.classList.add("opacity-0");
+            modal.querySelector(".transform").classList.add("scale-95");
+            setTimeout(() => {
+                modal.classList.add("hidden");
+            }, 300); // Esperar la duración de la transición antes de ocultar
+        }
+    </script>
+</body>
+</html>
